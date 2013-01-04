@@ -27,6 +27,8 @@
   :licence "MIT"
   :depends-on (:alexandria)
   :components ((:file "esrap")
+               (:file "builtin-grammars"
+                :depends-on ("esrap"))
                (:static-file "example-sexp.lisp")
                (:static-file "example-sexp-xml.lisp")
                (:static-file "README")))

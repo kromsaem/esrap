@@ -12,14 +12,11 @@
     t))
 
 (defgrammar #:sexp
+  (:use #:whitespace
+        #:literals)
   (:documentation
    "A simple grammar for S-expressions."))
 (in-grammar #:sexp)
-
-;;; Utility rules.
-
-(defrule whitespace (+ (or #\space #\tab #\newline))
-  (:constant nil))
 
 ;;; Here we go: an S-expression is either a list or an atom, with possibly leading whitespace.
 
@@ -37,12 +34,7 @@
     (declare (ignore p1 p2 w))
     (cons car cdr)))
 
-(defrule string (and #\" (* (not #\")) #\")
-  (:destructure (q1 string q2)
-    (declare (ignore q1 q2))
-    (text string)))
-
-(defrule atom (or string integer symbol))
+(defrule atom (or string/double-quotes integer symbol))
 
 (defrule integer (+ (or "0" "1" "2" "3" "4" "5" "6" "7" "8" "9"))
   (:lambda (list)
