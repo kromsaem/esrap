@@ -100,14 +100,6 @@ and an optional transformation rule.
 
 Nonterminals are defined using @code{defrule}.
 
-@emph{Note: Currently all rules share the same namespace, so you
-should not use symbols in the COMMON-LISP package or other shared
-packages to name your rules unless you are certain there are no other
-Esrap using components in your Lisp image. In a future version of
-Esrap grammar objects will be introduced to allow multiple definitions
-of nonterminals. Symbols in the COMMON-LISP package are specifically
-reserved for use by Esrap.}
-
 @heading Sequence
 @lisp
 (and subexpression ...)
@@ -203,6 +195,15 @@ whatever the predicate function returns.}
 
 @section Primary Interface
 
+@heading Grammar Objects
+
+@include include/macro-esrap-defgrammar.texinfo
+
+@include include/var-esrap-star-grammar-star.texinfo
+@include include/macro-esrap-in-grammar.texinfo
+
+@heading Rules
+
 @include include/macro-esrap-defrule.texinfo
 @include include/fun-esrap-parse.texinfo
 @include include/fun-esrap-describe-grammar.texinfo
@@ -211,20 +212,38 @@ whatever the predicate function returns.}
 
 @include include/fun-esrap-text.texinfo
 
-@section Introspection and Intercession
+@section Grammar Introspection and Intercession
 
-@include include/fun-esrap-add-rule.texinfo
-@include include/fun-esrap-change-rule.texinfo
-@include include/fun-esrap-find-rule.texinfo
-@include include/fun-esrap-remove-rule.texinfo
+@include include/fun-esrap-grammar-name.texinfo
+@include include/fun-esrap-grammar-dependencies.texinfo
+@include include/fun-esrap-grammar-rules.texinfo
+
+@include include/fun-esrap-find-grammar.texinfo
+@include include/fun-esrap-setf-find-grammar.texinfo
+@include include/fun-esrap-make-grammar.texinfo
+
+@section Rule Introspection and Intercession
+
+@include include/fun-esrap-rule-symbol.texinfo
 @include include/fun-esrap-rule-dependencies.texinfo
 @include include/fun-esrap-rule-expression.texinfo
 @include include/fun-esrap-setf-rule-expression.texinfo
-@include include/fun-esrap-rule-symbol.texinfo
+
+@include include/fun-esrap-find-rule.texinfo
+@include include/fun-esrap-add-rule.texinfo
+@include include/fun-esrap-remove-rule.texinfo
+@include include/fun-esrap-change-rule.texinfo
+
 @include include/fun-esrap-trace-rule.texinfo
 @include include/fun-esrap-untrace-rule.texinfo
 
 @section Error Conditions
+
+@include include/condition-esrap-grammar-not-found-error.texinfo
+@include include/condition-esrap-grammar-not-found-warning.texinfo
+
+@include include/condition-esrap-rule-not-found-error.texinfo
+@include include/condition-esrap-rule-not-found-warning.texinfo
 
 @include include/condition-esrap-esrap-error.texinfo
 @include include/condition-esrap-left-recursion.texinfo

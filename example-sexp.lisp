@@ -7,23 +7,19 @@
 
 (in-package :sexp-grammar)
 
-;;; A semantic predicate for filtering out double quotes.
-
-(defun not-doublequote (char)
-  (not (eql #\" char)))
-
-(defun not-integer (string)
-  (when (find-if-not #'digit-char-p string)
+(defun not-integer (partial-result)
+  (when (find-if-not #'digit-char-p (text partial-result))
     t))
+
+(defgrammar #:sexp
+  (:documentation
+   "A simple grammar for S-expressions."))
+(in-grammar #:sexp)
 
 ;;; Utility rules.
 
 (defrule whitespace (+ (or #\space #\tab #\newline))
   (:constant nil))
-
-(defrule alphanumeric (alphanumericp character))
-
-(defrule string-char (or (not-doublequote character) (and #\\ #\")))
 
 ;;; Here we go: an S-expression is either a list or an atom, with possibly leading whitespace.
 
@@ -41,18 +37,18 @@
     (declare (ignore p1 p2 w))
     (cons car cdr)))
 
-(defrule atom (or string integer symbol))
-
-(defrule string (and #\" (* string-char) #\")
+(defrule string (and #\" (* (not #\")) #\")
   (:destructure (q1 string q2)
     (declare (ignore q1 q2))
     (text string)))
+
+(defrule atom (or string integer symbol))
 
 (defrule integer (+ (or "0" "1" "2" "3" "4" "5" "6" "7" "8" "9"))
   (:lambda (list)
     (parse-integer (text list) :radix 10)))
 
-(defrule symbol (not-integer (+ alphanumeric))
+(defrule symbol (not-integer (+ (or (alphanumericp character) #\< #\> #\/ #\- #\_ #\?)))
   ;; NOT-INTEGER is not strictly needed because ATOM considers INTEGER before
   ;; a STRING, we know can accept all sequences of alphanumerics -- we already
   ;; know it isn't an integer.
@@ -61,35 +57,37 @@
 
 ;;;; Try these
 
-(parse 'sexp "FOO123")
+(find-grammar '#:sexp)
 
-(parse 'sexp "123")
+(parse '#:sexp 'sexp "FOO123")
 
-(parse 'sexp "\"foo\"")
+(parse '#:sexp 'sexp "123")
 
-(parse 'sexp "  (  1 2  3 (FOO\"foo\"123 )   )")
+(parse '#:sexp 'sexp "\"foo\"")
 
-(parse 'sexp "foobar")
+(parse '#:sexp 'sexp "  (  1 2  3 (FOO\"foo\"123 )   )")
 
-(let ((* :use-magic))
-  (parse 'sexp "foobar"))
+(parse '#:sexp 'sexp "foobar")
 
-(describe-grammar 'sexp)
+#+no (let ((* :use-magic))
+  (parse '#:sexp 'sexp "foobar"))
 
-(trace-rule 'sexp :recursive t)
+(describe-grammar '#:sexp 'sexp)
 
-(parse 'sexp "(foo bar 1 quux)")
+(trace-rule '#:sexp 'sexp :recursive t)
 
-(untrace-rule 'sexp :recursive t)
+(parse '#:sexp 'sexp "(foo bar 1 quux)")
 
-(defparameter *orig* (rule-expression (find-rule 'sexp)))
+(untrace-rule '#:sexp 'sexp :recursive t)
 
-(change-rule 'sexp '(and (? whitespace) (or list symbol)))
+(defparameter *orig* (rule-expression (find-rule '#:sexp 'sexp)))
 
-(parse 'sexp "(foo bar quux)")
+(change-rule '#:sexp 'sexp '(and (? whitespace) (or list symbol)))
 
-(parse 'sexp "(foo bar 1 quux)" :junk-allowed t)
+(parse '#:sexp 'sexp "(foo bar quux)")
 
-(change-rule 'sexp *orig*)
+(parse '#:sexp 'sexp "(foo bar 1 quux)" :junk-allowed t)
 
-(parse 'sexp "(foo bar 1 quux)" :junk-allowed t)
+(change-rule '#:sexp 'sexp *orig*)
+
+(parse '#:sexp 'sexp "(foo bar 1 quux)" :junk-allowed t)
