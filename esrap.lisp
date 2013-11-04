@@ -55,6 +55,7 @@
    #:esrap-error
    #:esrap-error-position
    #:esrap-error-text
+   #:esrap-error-expressions
    #:find-rule
    #:invalid-expression-error
    #:invalid-expression-error-expression
@@ -67,6 +68,7 @@
    #:rule-dependencies
    #:rule-expression
    #:rule-symbol
+   #:rule-expected
    #:text
    #:trace-rule
    #:untrace-rule
@@ -92,7 +94,8 @@
 
 (define-condition esrap-error (parse-error)
   ((text :initarg :text :initform nil :reader esrap-error-text)
-   (position :initarg :position :initform nil :reader esrap-error-position))
+   (position :initarg :position :initform nil :reader esrap-error-position)
+   (expressions :initarg :expressions :initform nil :reader esrap-error-expressions))
   (:documentation
    "Signaled when an Esrap parse fails. Use ESRAP-ERROR-TEXT to obtain the
 string that was being parsed, and ESRAP-ERROR-POSITION the position at which
@@ -143,12 +146,13 @@ the error occurred."))
          (simple-condition-format-control condition)
          (simple-condition-format-arguments condition)))
 
-(declaim (ftype (function (t t t &rest t) (values nil &optional))
+(declaim (ftype (function (t t t t &rest t) (values nil &optional))
                 simple-esrap-error))
-(defun simple-esrap-error (text position format-control &rest format-arguments)
+(defun simple-esrap-error (text position expressions format-control &rest format-arguments)
   (error 'simple-esrap-error
          :text text
          :position position
+         :expressions expressions
          :format-control format-control
          :format-arguments format-arguments))
 
@@ -401,7 +405,12 @@ constructors."))
    (%around
     :initarg :around
     :initform nil
-    :reader rule-around)))
+    :reader rule-around)
+   (%expected
+    :initarg :expected
+    :initform nil
+    :reader rule-expected)
+   ))
 
 (defun rule-symbol (rule)
   "Returns the nonterminal associated with the RULE, or NIL of the rule
@@ -717,7 +726,7 @@ in which the first two return values cannot indicate failures."
         (cond
           ((= position end) nil) ; Consumed all input.
           (junk-allowed position) ; Did not consume all input; junk is OK.
-          (t (simple-esrap-error text position "Incomplete parse.")))
+          (t (simple-esrap-error text position nil "Incomplete parse.")))
         t)))
     ;; Did not parse anything, but junk is allowed.
     (junk-allowed
@@ -741,7 +750,9 @@ in which the first two return values cannot indicate failures."
                          (cons (list expression)
                                (expressions detail))))))))
        (let ((expressions (expressions result)))
-         (simple-esrap-error text (failed-parse-position result)
+         (simple-esrap-error text 
+                             (failed-parse-position result)
+                             expressions
                              "Could not parse subexpression ~S when ~
                               parsing~2&~< Expression ~{~S~^ ~A~}~@{~&    ~
                               Subexpression ~{~S~^ ~A~}~}~:>"
@@ -749,7 +760,7 @@ in which the first two return values cannot indicate failures."
                              expressions))))
     ;; Parse failed because of an inactive rule.
     (t
-     (simple-esrap-error text nil "Rule ~S not active"
+     (simple-esrap-error text nil nil "Rule ~S not active"
                          (inactive-rule-rule result)))))
 
 (defmacro defrule (&whole form symbol expression &body options)
@@ -832,7 +843,8 @@ Following OPTIONS can be specified:
         (around nil)
         (guard t)
         (condition t)
-        (guard-seen nil))
+        (guard-seen nil)
+        (expected nil))
     (when options
       (dolist (option options)
         (flet ((set-transform (trans/bounds trans/no-bounds
@@ -900,6 +912,9 @@ Following OPTIONS can be specified:
                   `(lambda (,production)
                      (destructuring-bind ,lambda-list ,production
                        ,@forms))))))
+            ((:expected value)
+             (when value
+               (setf expected value)))
             ((:around lambda-list &body forms)
              (multiple-value-bind (lambda-list start end ignore)
                  (parse-lambda-list-maybe-containing-&bounds lambda-list)
@@ -916,7 +931,8 @@ Following OPTIONS can be specified:
                                          :guard-expression ',guard
                                          :transform ,(or transform '#'identity/bounds)
                                          :around ,around
-                                         :condition ,condition)))))
+                                         :condition ,condition
+                                         :expected ,expected)))))
 
 (defun add-rule (symbol rule)
   "Associates RULE with the nonterminal SYMBOL. Signals an error if the
